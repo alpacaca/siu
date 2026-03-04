@@ -6,6 +6,12 @@ A lightweight clipboard manager for macOS, built with Swift and SwiftUI.
 ![Swift 6](https://img.shields.io/badge/Swift-6-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
+## Screenshots
+
+| Clipboard | Vault |
+|:---------:|:-----:|
+| ![Clipboard](assets/clipboard.png) | ![Vault](assets/vault.png) |
+
 ## Features
 
 - **Clipboard History** — Automatically records text and image copies
@@ -14,7 +20,8 @@ A lightweight clipboard manager for macOS, built with Swift and SwiftUI.
 - **Search** — Quickly filter through clipboard history
 - **Code Detection** — Auto-identifies code snippets with monospaced display
 - **Current Highlight** — Highlights the item matching your current clipboard
-- **Monokai Pro Theme** — Warm, elegant dark UI inspired by Monokai Pro
+- **Vault** — Save reusable snippets with tag grouping, encrypted entry support, and inline actions
+- **Monokai Pro Theme** — Cyberpunk / HUD–inspired dark UI with glow accents
 - **Menu Bar App** — Lives in the status bar, no Dock icon
 
 ## Install
@@ -50,10 +57,10 @@ Siu/
 └── Siu/
     ├── SiuApp.swift          # App entry, status bar setup
     ├── Controllers/          # Floating panel controller
-    ├── Models/               # ClipboardItem model
-    ├── Services/             # Clipboard monitor, storage, image manager
+    ├── Models/               # ClipboardItem, SnippetItem
+    ├── Services/             # Clipboard monitor, storage, snippet vault, image manager
     ├── Utilities/            # HotKey (Carbon API), constants
-    ├── Views/                # SwiftUI views (list, settings, hotkey sheet)
+    ├── Views/                # SwiftUI views (clipboard, vault, settings)
     └── Assets.xcassets/      # App icons
 ```
 

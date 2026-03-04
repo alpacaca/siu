@@ -18,6 +18,7 @@ struct SiuApp: App {
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let storage = ClipboardStorage()
+    let snippetStorage = SnippetStorage()
     let clipboardMonitor = ClipboardMonitor()
     let panelController = FloatingPanelController()
     
@@ -53,6 +54,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         
         let listView = ClipboardListView(
             storage: storage,
+            snippetStorage: snippetStorage,
             monitor: clipboardMonitor,
             panelController: panelController
         )

@@ -25,7 +25,8 @@ final class ClipboardMonitor: ObservableObject {
         isMonitoring = true
         
         timer = Timer.scheduledTimer(withTimeInterval: Constants.clipboardPollingInterval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
+            guard let self else { return }
+            Task { @MainActor [weak self] in
                 self?.checkForChanges()
             }
         }

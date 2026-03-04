@@ -3,16 +3,16 @@
 
 import SwiftUI
 
-// MARK: - Monokai Pro Warm Theme
-// Inspired by Monokai Pro (Filter Spectrum) — warm, elegant, soft contrast
+// MARK: - Monokai Pro Warm Theme — Tech Edition
+// Inspired by Monokai Pro (Filter Spectrum) with cyberpunk / HUD accents
 enum Theme {
     // Backgrounds
-    static let bg          = Color(hex: "2D2A2E")       // Monokai Pro bg
-    static let bgLight     = Color(hex: "353236")       // slightly lighter
-    static let bgHover     = Color(hex: "403E41")       // hover state
-    static let bgSelected  = Color(hex: "4A474D")       // selected
+    static let bg          = Color(hex: "1E1C20")       // deeper base
+    static let bgLight     = Color(hex: "2A282D")       // card surface
+    static let bgHover     = Color(hex: "36343A")       // hover state
+    static let bgSelected  = Color(hex: "43414A")       // selected
     
-    // Accents — Monokai Pro warm palette
+    // Accents — Monokai Pro warm palette + neon edge
     static let yellow      = Color(hex: "FFD866")       // warm yellow
     static let orange      = Color(hex: "FC9867")       // warm orange
     static let pink        = Color(hex: "FF6188")       // soft pink
@@ -28,10 +28,32 @@ enum Theme {
     
     // Functional
     static let danger      = Color(hex: "FF6188")
-    static let border      = Color(hex: "4A474D")
+    static let border      = Color(hex: "3A383F")
     
     // Code
-    static let codeBg      = Color(hex: "221F22")       // deeper for code blocks
+    static let codeBg      = Color(hex: "17151A")       // deeper for code blocks
+    
+    // Tech glow gradients
+    static let glowOrange  = LinearGradient(
+        colors: [Color(hex: "FC9867"), Color(hex: "FF6188")],
+        startPoint: .leading, endPoint: .trailing
+    )
+    static let glowCyan    = LinearGradient(
+        colors: [Color(hex: "78DCE8"), Color(hex: "AB9DF2")],
+        startPoint: .leading, endPoint: .trailing
+    )
+    static let glowGreen   = LinearGradient(
+        colors: [Color(hex: "A9DC76"), Color(hex: "78DCE8")],
+        startPoint: .leading, endPoint: .trailing
+    )
+    static let borderGlow  = LinearGradient(
+        colors: [
+            Color(hex: "FC9867").opacity(0.4),
+            Color(hex: "AB9DF2").opacity(0.2),
+            Color(hex: "78DCE8").opacity(0.4)
+        ],
+        startPoint: .topLeading, endPoint: .bottomTrailing
+    )
 }
 
 extension Color {
@@ -50,12 +72,27 @@ extension Color {
     }
 }
 
+// MARK: - Tab Type
+enum PanelTab: String, CaseIterable {
+    case clipboard = "Clipboard"
+    case snippets = "Vault"
+    
+    var icon: String {
+        switch self {
+        case .clipboard: return "doc.on.clipboard"
+        case .snippets: return "lock.shield"
+        }
+    }
+}
+
 // MARK: - Main View
 struct ClipboardListView: View {
     @ObservedObject var storage: ClipboardStorage
+    @ObservedObject var snippetStorage: SnippetStorage
     @ObservedObject var monitor: ClipboardMonitor
     @ObservedObject var panelController: FloatingPanelController
     
+    @State private var selectedTab: PanelTab = .clipboard
     @State private var searchText = ""
     @State private var showClearConfirmation = false
     @State private var showHotKeySheet = false
@@ -68,24 +105,34 @@ struct ClipboardListView: View {
     
     var body: some View {
         VStack(spacing: 0) {
-            // Drag handle area (header doubles as drag zone)
             headerBar
-            searchBar
-            dividerLine
-            listContent
-            dividerLine
-            footerBar
+            tabBar
+            
+            if selectedTab == .clipboard {
+                searchBar
+                dividerLine
+                listContent
+                dividerLine
+                footerBar
+            } else {
+                SnippetListView(
+                    storage: snippetStorage,
+                    monitor: monitor,
+                    panelController: panelController
+                )
+            }
         }
         .frame(width: FloatingPanelController.panelWidth,
                height: FloatingPanelController.panelHeight)
         .background(Theme.bg)
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(Theme.border.opacity(0.5), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 14)
+                .stroke(Theme.borderGlow, lineWidth: 1)
         )
-        .shadow(color: Color.black.opacity(0.35), radius: 24, x: 0, y: 12)
-        .shadow(color: Theme.orange.opacity(0.04), radius: 40, x: 0, y: 0)
+        .shadow(color: Color.black.opacity(0.5), radius: 30, x: 0, y: 16)
+        .shadow(color: Theme.orange.opacity(0.06), radius: 50, x: 0, y: 0)
+        .shadow(color: Theme.cyan.opacity(0.03), radius: 60, x: 0, y: -5)
         .alert("确认清空", isPresented: $showClearConfirmation) {
             Button("取消", role: .cancel) {}
             Button("清空全部", role: .destructive) {
@@ -99,10 +146,45 @@ struct ClipboardListView: View {
         }
     }
     
+    // MARK: - Tab Bar
+    private var tabBar: some View {
+        HStack(spacing: 0) {
+            ForEach(PanelTab.allCases, id: \.self) { tab in
+                Button {
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        selectedTab = tab
+                    }
+                } label: {
+                    VStack(spacing: 6) {
+                        HStack(spacing: 5) {
+                            Image(systemName: tab.icon)
+                                .font(.system(size: 10, weight: .medium))
+                            Text(tab.rawValue)
+                                .font(.system(size: 11, weight: .semibold, design: .monospaced))
+                                .tracking(0.5)
+                        }
+                        .foregroundStyle(selectedTab == tab ? Theme.orange : Theme.textMuted)
+                        
+                        // Underline indicator
+                        Rectangle()
+                            .fill(selectedTab == tab ? AnyShapeStyle(Theme.glowOrange) : AnyShapeStyle(Color.clear))
+                            .frame(height: 1.5)
+                            .shadow(color: selectedTab == tab ? Theme.orange.opacity(0.5) : .clear, radius: 4, y: 1)
+                    }
+                    .padding(.horizontal, 16)
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.bottom, 4)
+    }
+    
     // MARK: - Header (draggable)
     private var headerBar: some View {
         HStack(spacing: 8) {
-            // Logo — Siu with Monokai accent colors
+            // Logo — Siu with glow
             HStack(spacing: 1) {
                 Text("S")
                     .foregroundStyle(Theme.yellow)
@@ -111,7 +193,19 @@ struct ClipboardListView: View {
                 Text("u")
                     .foregroundStyle(Theme.pink)
             }
-            .font(.system(size: 18, weight: .heavy, design: .rounded))
+            .font(.system(size: 18, weight: .heavy, design: .monospaced))
+            .shadow(color: Theme.orange.opacity(0.4), radius: 8, x: 0, y: 0)
+            
+            // Dot separator
+            Circle()
+                .fill(Theme.orange.opacity(0.3))
+                .frame(width: 3, height: 3)
+            
+            // Version / status hint
+            Text("v1")
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
+                .foregroundStyle(Theme.textDim)
+                .tracking(1)
             
             Spacer()
             
@@ -138,9 +232,9 @@ struct ClipboardListView: View {
                 .font(.system(size: 12))
                 .foregroundStyle(Theme.textMuted)
             
-            TextField("搜索...", text: $searchText)
+            TextField("Search...", text: $searchText)
                 .textFieldStyle(.plain)
-                .font(.system(size: 13))
+                .font(.system(size: 12, design: .monospaced))
                 .foregroundStyle(Theme.text)
             
             if !searchText.isEmpty {
@@ -159,6 +253,10 @@ struct ClipboardListView: View {
         .background(
             RoundedRectangle(cornerRadius: 8)
                 .fill(Theme.bgLight)
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Theme.border.opacity(0.5), lineWidth: 0.5)
+                )
         )
         .padding(.horizontal, 14)
         .padding(.bottom, 8)
@@ -167,8 +265,9 @@ struct ClipboardListView: View {
     // MARK: - Divider
     private var dividerLine: some View {
         Rectangle()
-            .fill(Theme.border.opacity(0.4))
+            .fill(Theme.borderGlow)
             .frame(height: 0.5)
+            .opacity(0.6)
     }
     
     // MARK: - List Content
@@ -262,13 +361,13 @@ struct ClipboardListView: View {
                 .font(.system(size: 36, weight: .ultraLight))
                 .foregroundStyle(Theme.textDim)
             
-            Text(searchText.isEmpty ? "空空如也" : "没有匹配结果")
-                .font(.system(size: 13, weight: .medium))
+            Text(searchText.isEmpty ? "Empty" : "No matches")
+                .font(.system(size: 13, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.textMuted)
             
             if searchText.isEmpty {
-                Text("复制内容后自动记录")
-                    .font(.system(size: 11))
+                Text("Copy something to get started")
+                    .font(.system(size: 10, design: .monospaced))
                     .foregroundStyle(Theme.textDim)
             }
         }
@@ -278,21 +377,23 @@ struct ClipboardListView: View {
     // MARK: - Footer
     private var footerBar: some View {
         HStack(spacing: 0) {
+            // Pulse dot
             Circle()
                 .fill(Theme.green)
                 .frame(width: 5, height: 5)
+                .shadow(color: Theme.green.opacity(0.5), radius: 3)
                 .padding(.trailing, 5)
             
             Text("\(storage.itemCount)")
                 .font(.system(size: 11, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.textSoft)
             
-            Text(" 条")
-                .font(.system(size: 11))
+            Text(" items")
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(Theme.textMuted)
             
             Text("  ·  \(ImageStorageManager.shared.formattedStorageSize())")
-                .font(.system(size: 11))
+                .font(.system(size: 10, design: .monospaced))
                 .foregroundStyle(Theme.textDim)
             
             Spacer()
@@ -304,15 +405,19 @@ struct ClipboardListView: View {
                 HStack(spacing: 3) {
                     Image(systemName: "trash")
                         .font(.system(size: 9))
-                    Text("清空")
-                        .font(.system(size: 10, weight: .medium))
+                    Text("Purge")
+                        .font(.system(size: 10, weight: .medium, design: .monospaced))
                 }
                 .foregroundStyle(Theme.pink.opacity(0.6))
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(
                     RoundedRectangle(cornerRadius: 5)
-                        .fill(Theme.pink.opacity(0.08))
+                        .fill(Theme.pink.opacity(0.06))
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(Theme.pink.opacity(0.15), lineWidth: 0.5)
+                        )
                 )
             }
             .buttonStyle(.plain)
@@ -320,7 +425,7 @@ struct ClipboardListView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .background(Theme.bgLight.opacity(0.5))
+        .background(Theme.bgLight.opacity(0.4))
     }
 }
 
@@ -341,6 +446,10 @@ struct HeaderButton: View {
                 .background(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(isHovered ? Theme.bgHover : Color.clear)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(isHovered ? Theme.border.opacity(0.6) : Color.clear, lineWidth: 0.5)
+                        )
                 )
         }
         .buttonStyle(.plain)
@@ -369,11 +478,12 @@ struct ClipboardRow: View {
     
     var body: some View {
         HStack(spacing: 0) {
-            // Left accent line
+            // Left accent line with glow
             RoundedRectangle(cornerRadius: 1)
                 .fill(accentColor)
                 .frame(width: 2.5)
                 .padding(.vertical, 6)
+                .shadow(color: accentColor.opacity(0.4), radius: 3, x: 0, y: 0)
             
             VStack(alignment: .leading, spacing: 3) {
                 // Pin badge inline
@@ -381,8 +491,9 @@ struct ClipboardRow: View {
                     HStack(spacing: 3) {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 7))
-                        Text("置顶")
-                            .font(.system(size: 9, weight: .medium))
+                        Text("PIN")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .tracking(0.5)
                     }
                     .foregroundStyle(Theme.yellow.opacity(0.7))
                 }
@@ -398,17 +509,17 @@ struct ClipboardRow: View {
             
             // Time
             Text(item.createdAt.relativeFormatted())
-                .font(.system(size: 10, design: .monospaced))
+                .font(.system(size: 9, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.textDim)
                 .fixedSize()
                 .padding(.trailing, 12)
         }
         .background(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 7)
                 .fill(backgroundColor)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
+            RoundedRectangle(cornerRadius: 7)
                 .fill(Theme.yellow.opacity(isCopied ? 0.12 : 0))
         )
         .overlay(
@@ -416,26 +527,31 @@ struct ClipboardRow: View {
                 if isCurrentClipboard {
                     HStack(spacing: 0) {
                         Spacer()
-                        // "当前" badge
-                        Text("当前")
-                            .font(.system(size: 9, weight: .semibold))
+                        Text("ACTIVE")
+                            .font(.system(size: 8, weight: .bold, design: .monospaced))
+                            .tracking(0.5)
                             .foregroundStyle(Theme.bg)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
                             .background(
-                                Capsule().fill(Theme.yellow)
+                                Capsule()
+                                    .fill(Theme.yellow)
+                                    .shadow(color: Theme.yellow.opacity(0.3), radius: 4)
                             )
                             .padding(.trailing, 8)
                             .padding(.top, 6)
-                        
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                 }
             }
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 6)
-                .stroke(isCurrentClipboard ? Theme.yellow.opacity(0.5) : Color.clear, lineWidth: 1)
+            RoundedRectangle(cornerRadius: 7)
+                .stroke(
+                    isCurrentClipboard ? Theme.yellow.opacity(0.4) :
+                    (isHovered ? Theme.border.opacity(0.6) : Color.clear),
+                    lineWidth: 0.5
+                )
         )
         .scaleEffect(isCopied ? 0.97 : 1.0)
         .animation(.spring(response: 0.25, dampingFraction: 0.7), value: isCopied)
@@ -452,18 +568,18 @@ struct ClipboardRow: View {
             Button {
                 onSelect(item)
             } label: {
-                Label("复制", systemImage: "doc.on.clipboard")
+                Label("Copy", systemImage: "doc.on.clipboard")
             }
             Button {
                 onTogglePin(item)
             } label: {
-                Label(item.isPinned ? "取消置顶" : "置顶", systemImage: item.isPinned ? "pin.slash" : "pin")
+                Label(item.isPinned ? "Unpin" : "Pin", systemImage: item.isPinned ? "pin.slash" : "pin")
             }
             Divider()
             Button(role: .destructive) {
                 onDelete(item)
             } label: {
-                Label("删除", systemImage: "trash")
+                Label("Delete", systemImage: "trash")
             }
         }
         .task {
@@ -504,7 +620,7 @@ struct ClipboardRow: View {
         let text = item.content ?? ""
         if isCodeLike {
             Text(text.prefix(200))
-                .font(.system(size: 11.5, design: .monospaced))
+                .font(.system(size: 11, design: .monospaced))
                 .foregroundStyle(Theme.text.opacity(0.9))
                 .lineLimit(4)
                 .padding(8)
@@ -512,10 +628,14 @@ struct ClipboardRow: View {
                 .background(
                     RoundedRectangle(cornerRadius: 6)
                         .fill(Theme.codeBg)
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 6)
+                                .stroke(Theme.cyan.opacity(0.1), lineWidth: 0.5)
+                        )
                 )
         } else {
             Text(text.prefix(150))
-                .font(.system(size: 12.5))
+                .font(.system(size: 12))
                 .foregroundStyle(Theme.text.opacity(0.9))
                 .lineLimit(3)
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -531,6 +651,10 @@ struct ClipboardRow: View {
                     .aspectRatio(contentMode: .fill)
                     .frame(width: 40, height: 40)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 6)
+                            .stroke(Theme.purple.opacity(0.2), lineWidth: 0.5)
+                    )
             } else {
                 RoundedRectangle(cornerRadius: 6)
                     .fill(Theme.bgLight)
@@ -541,9 +665,10 @@ struct ClipboardRow: View {
                             .font(.system(size: 16))
                     }
             }
-            Text("图片")
-                .font(.system(size: 12))
+            Text("IMAGE")
+                .font(.system(size: 10, weight: .medium, design: .monospaced))
                 .foregroundStyle(Theme.purple.opacity(0.8))
+                .tracking(0.5)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
