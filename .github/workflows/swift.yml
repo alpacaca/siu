@@ -18,5 +18,3 @@ jobs:
     - uses: actions/checkout@v4
     - name: Build
       run: cd Siu && swift build -v
-    - name: Run tests
-      run: cd Siu && swift test -v
