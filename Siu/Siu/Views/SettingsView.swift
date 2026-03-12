@@ -2,15 +2,35 @@
 // Licensed under the MIT License. See LICENSE file in the project root for details.
 
 import SwiftUI
+import AppKit
 import ServiceManagement
 
 struct SettingsView: View {
     @AppStorage("maxHistoryCount") private var maxHistoryCount = 1000
     @AppStorage("launchAtLogin") private var launchAtLogin = false
+    @AppStorage("clipboardSoundName") private var clipboardSoundName = "Blow"
     @ObservedObject var storage: ClipboardStorage
     
     @State private var showClearAlert = false
     @State private var hotKeyDisplay: String = ""
+    
+    private static let availableSounds: [(name: String, label: String)] = [
+        ("OFF",       "关闭"),
+        ("Blow",      "Blow — 轻柔吹气"),
+        ("Pop",       "Pop — 气泡弹出"),
+        ("Tink",      "Tink — 轻敲"),
+        ("Glass",     "Glass — 玻璃"),
+        ("Ping",      "Ping — 清脆叮"),
+        ("Morse",     "Morse — 电码滴"),
+        ("Funk",      "Funk — 复古嘟"),
+        ("Bottle",    "Bottle — 瓶声"),
+        ("Hero",      "Hero — 英雄"),
+        ("Frog",      "Frog — 蛙鸣"),
+        ("Purr",      "Purr — 呼噜"),
+        ("Basso",     "Basso — 低沉"),
+        ("Sosumi",    "Sosumi — 经典"),
+        ("Submarine", "Submarine — 声纳"),
+    ]
     
     var body: some View {
         TabView {
@@ -29,7 +49,7 @@ struct SettingsView: View {
                     Label("关于", systemImage: "info.circle")
                 }
         }
-        .frame(width: 420, height: 280)
+        .frame(width: 420, height: 340)
         .onAppear {
             loadHotKeyDisplay()
         }
@@ -60,6 +80,30 @@ struct SettingsView: View {
                     Text("（在悬浮窗内可修改）")
                         .font(.system(size: 10))
                         .foregroundStyle(.tertiary)
+                }
+            }
+            
+            Section("提示音") {
+                HStack {
+                    Text("复制提示音")
+                    Spacer()
+                    Picker("", selection: $clipboardSoundName) {
+                        ForEach(Self.availableSounds, id: \.name) { sound in
+                            Text(sound.label).tag(sound.name)
+                        }
+                    }
+                    .frame(width: 180)
+                    
+                    Button {
+                        if clipboardSoundName != "OFF" {
+                            NSSound(named: clipboardSoundName)?.play()
+                        }
+                    } label: {
+                        Image(systemName: "speaker.wave.2")
+                    }
+                    .buttonStyle(.borderless)
+                    .disabled(clipboardSoundName == "OFF")
+                    .help("试听")
                 }
             }
             
