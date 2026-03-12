@@ -63,18 +63,28 @@ final class ClipboardMonitor: ObservableObject {
         if let imageData = pasteboard.data(forType: .tiff),
            let image = NSImage(data: imageData) {
             storage.addImageItem(image)
+            playRecordedSound()
             return
         }
         
         if let imageData = pasteboard.data(forType: .png),
            let image = NSImage(data: imageData) {
             storage.addImageItem(image)
+            playRecordedSound()
             return
         }
         
         if let text = pasteboard.string(forType: .string) {
             storage.addTextItem(text)
+            playRecordedSound()
             return
         }
+    }
+    
+    /// 播放提示音，告知用户剪贴板内容已被 Siu 记录
+    private func playRecordedSound() {
+        let soundName = UserDefaults.standard.string(forKey: "clipboardSoundName") ?? "Blow"
+        guard soundName != "OFF" else { return }
+        NSSound(named: soundName)?.play()
     }
 }

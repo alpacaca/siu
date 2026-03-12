@@ -1,5 +1,19 @@
 # Release Notes
 
+## v1.1.0
+
+> Clipboard copy sound notification & customizable alert sound.
+
+### New Features
+
+- **Copy Sound Alert** — Plays a system sound when Siu records a clipboard entry, so you always know it's captured
+- **Customizable Alert Sound** — Choose from 14 built-in macOS sounds or turn it off entirely, configurable in Settings → General → 提示音
+- **Preview Button** — Click 🔊 in Settings to preview the selected sound before applying
+
+### Changes
+
+- Settings window height increased to accommodate the new sound section
+
 ## v1.0.0
 
 > Initial release of **Siu** — a lightweight clipboard manager for macOS.
