@@ -8,6 +8,15 @@ import SwiftUI
 final class FloatingPanelController: ObservableObject {
     @Published var isVisible: Bool = false
     
+    /// 键盘导航事件，供 View 层监听
+    @Published var keyNavigationEvent: KeyNavigationEvent? = nil
+    
+    enum KeyNavigationEvent {
+        case up
+        case down
+        case confirm
+    }
+    
     private var panel: NSPanel?
     private var clickOutsideMonitor: Any?
     private var escMonitor: Any?
@@ -85,11 +94,29 @@ final class FloatingPanelController: ObservableObject {
             }
         }
         
-        // ESC to dismiss
+        // ESC to dismiss + Arrow/Enter for navigation
         escMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if event.keyCode == 53 {
+            if event.keyCode == 53 {  // ESC
                 Task { @MainActor in
                     self?.hidePanel()
+                }
+                return nil
+            }
+            if event.keyCode == 126 {  // ↑
+                Task { @MainActor in
+                    self?.keyNavigationEvent = .up
+                }
+                return nil
+            }
+            if event.keyCode == 125 {  // ↓
+                Task { @MainActor in
+                    self?.keyNavigationEvent = .down
+                }
+                return nil
+            }
+            if event.keyCode == 36 {  // Return
+                Task { @MainActor in
+                    self?.keyNavigationEvent = .confirm
                 }
                 return nil
             }

@@ -1,5 +1,21 @@
 # Release Notes
 
+## v1.2.0
+
+> Keyboard navigation for clipboard history.
+
+### New Features
+
+- **Keyboard Navigation** — Use ↑↓ arrow keys to navigate through clipboard history in the floating panel
+- **Visual Selection** — Selected item is highlighted with an orange border and dark background
+- **Auto-scroll** — Selected item automatically scrolls into view
+- **Enter to Paste** — Press Enter/Return to paste the selected item
+
+### Changes
+
+- Enhanced floating panel interaction with keyboard-first workflow
+- Improved accessibility for power users
+
 ## v1.1.0
 
 > Clipboard copy sound notification & customizable alert sound.
