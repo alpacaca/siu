@@ -98,6 +98,7 @@ struct ClipboardListView: View {
     @State private var showHotKeySheet = false
     @State private var copiedItemId: UUID? = nil
     @State private var currentClipboardItemId: UUID? = nil
+    @State private var selectedItemId: UUID? = nil
     
     private var filteredItems: [ClipboardItem] {
         storage.filteredItems(searchText: searchText, filter: .all)
@@ -284,6 +285,7 @@ struct ClipboardListView: View {
                                     item: item,
                                     isCopied: copiedItemId == item.id,
                                     isCurrentClipboard: currentClipboardItemId == item.id,
+                                    isKeyboardSelected: selectedItemId == item.id,
                                     onSelect: { selectItem($0) },
                                     onDelete: { storage.deleteItem($0) },
                                     onTogglePin: { storage.togglePin($0) }
@@ -296,7 +298,7 @@ struct ClipboardListView: View {
                     .onChange(of: panelController.isVisible) { _, visible in
                         if visible {
                             detectCurrentClipboardItem()
-                            // Scroll to the matched item
+                            selectedItemId = nil
                             if let id = currentClipboardItemId {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                     withAnimation(.easeInOut(duration: 0.25)) {
@@ -306,7 +308,13 @@ struct ClipboardListView: View {
                             }
                         } else {
                             currentClipboardItemId = nil
+                            selectedItemId = nil
                         }
+                    }
+                    .onChange(of: panelController.keyNavigationEvent) { _, event in
+                        guard let event = event, selectedTab == .clipboard else { return }
+                        panelController.keyNavigationEvent = nil
+                        handleKeyNavigation(event, proxy: proxy)
                     }
                 }
             }
@@ -350,6 +358,43 @@ struct ClipboardListView: View {
             panelController.hidePanel()
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                 copiedItemId = nil
+            }
+        }
+    }
+    
+    private func handleKeyNavigation(_ event: FloatingPanelController.KeyNavigationEvent, proxy: ScrollViewProxy) {
+        let items = filteredItems
+        guard !items.isEmpty else { return }
+        
+        switch event {
+        case .up:
+            if let currentId = selectedItemId,
+               let currentIndex = items.firstIndex(where: { $0.id == currentId }) {
+                let newIndex = max(currentIndex - 1, 0)
+                selectedItemId = items[newIndex].id
+            } else {
+                // 没有选中项时，选中第一项
+                selectedItemId = items.first?.id
+            }
+        case .down:
+            if let currentId = selectedItemId,
+               let currentIndex = items.firstIndex(where: { $0.id == currentId }) {
+                let newIndex = min(currentIndex + 1, items.count - 1)
+                selectedItemId = items[newIndex].id
+            } else {
+                selectedItemId = items.first?.id
+            }
+        case .confirm:
+            if let currentId = selectedItemId,
+               let item = items.first(where: { $0.id == currentId }) {
+                selectItem(item)
+            }
+        }
+        
+        // 滚动到选中项
+        if let id = selectedItemId {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                proxy.scrollTo(id, anchor: .center)
             }
         }
     }
@@ -462,6 +507,7 @@ struct ClipboardRow: View {
     let item: ClipboardItem
     let isCopied: Bool
     let isCurrentClipboard: Bool
+    let isKeyboardSelected: Bool
     let onSelect: (ClipboardItem) -> Void
     let onDelete: (ClipboardItem) -> Void
     let onTogglePin: (ClipboardItem) -> Void
@@ -549,8 +595,9 @@ struct ClipboardRow: View {
             RoundedRectangle(cornerRadius: 7)
                 .stroke(
                     isCurrentClipboard ? Theme.yellow.opacity(0.4) :
-                    (isHovered ? Theme.border.opacity(0.6) : Color.clear),
-                    lineWidth: 0.5
+                    (isKeyboardSelected ? Theme.orange.opacity(0.5) :
+                    (isHovered ? Theme.border.opacity(0.6) : Color.clear)),
+                    lineWidth: isKeyboardSelected ? 1 : 0.5
                 )
         )
         .scaleEffect(isCopied ? 0.97 : 1.0)
@@ -600,6 +647,7 @@ struct ClipboardRow: View {
     
     private var backgroundColor: Color {
         if isCurrentClipboard { return Theme.yellow.opacity(0.08) }
+        if isKeyboardSelected { return Theme.bgSelected }
         if isHovered { return Theme.bgHover.opacity(0.6) }
         return Color.clear
     }
